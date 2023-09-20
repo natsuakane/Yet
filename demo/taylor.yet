@@ -1,0 +1,18 @@
+#include fact
+#include pow
+
+item_sin(x, n) = {
+	declare(m, s);
+	m = 2 * n + 1;
+	s = n % 2 == 0? 1 : -1;
+	return(s * pow(x, m) / fact(m));
+};
+taylor_sin(x, n) = n == 0? item_sin(x, 0) : (item_sin(x, n) + taylor_sin(x, n - 1));
+
+item_cos(x, n) = {
+	declare(m, s);
+	m = 2 * n;
+	s = n % 2 == 0? 1 : -1;
+	return(s * pow(x, m) / fact(m));
+};
+taylor_cos(x, n) = n == 0? 1 : (item_cos(x, n) + taylor_cos(x, n - 1));

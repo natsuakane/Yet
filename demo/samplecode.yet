@@ -1,0 +1,13 @@
+fib(n) = n < 2? n : fib(n - 1) + fib(n - 2);
+fact(n) = n == 1? n : n * fact(n - 1);
+gcm(n1, n2) = {
+	declare(ret);
+	ret = n1 % n2; 
+	return(ret == 0? n2 : gcm(n2, ret));
+};
+
+main = {
+	write(fib(read()));
+	write(fact(read()));
+	write(gcm(read(), read()));
+};

@@ -1,0 +1,15 @@
+fibarray = makearray(40);
+init_array(n, x) = {
+	fibarray$(n - 1) = x;
+	if(n == 1, {return(0);}, {init_array(n - 1, x);});
+};
+fib(n) = {
+	declare(f);
+	if(fibarray@n == -1, {f = fib(n - 1) + fib(n - 2); fibarray$n = f; return(f);}, {return(fibarray@n);});
+};
+main() = {
+	init_array(40, -1);
+	fibarray$0 = 0;
+	fibarray$1 = 1;
+	write(fib(read()));
+};

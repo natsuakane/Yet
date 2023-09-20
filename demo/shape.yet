@@ -1,0 +1,52 @@
+#define SET_SIZE 0
+#define LINE 1
+#define CIRCLE 2
+#define RECT 3
+#define TRI 4
+
+set_size(x, y) = {
+	write(SET_SIZE);
+	write(x);
+	write(y);
+};
+line(x1, y1, x2, y2, c1, c2, c3) = {
+	write(LINE);
+	write(x1);
+	write(y1);
+	write(x2);
+	write(y2);
+	write(c1);
+	write(c2);
+	write(c3);
+};
+circle(x, y, r, c1, c2, c3) = {
+	write(CIRCLE);
+	write(x);
+	write(y);
+	write(r);
+	write(c1);
+	write(c2);
+	write(c3);
+};
+rect(x, y, w, h, c1, c2, c3) = {
+	write(RECT);
+	write(x);
+	write(y);
+	write(w);
+	write(h);
+	write(c1);
+	write(c2);
+	write(c3);
+};
+tri(x1, y1, x2, y2, x3, y3, c1, c2, c3) = {
+	write(TRI);
+	write(x1);
+	write(y1);
+	write(x2);
+	write(y2);
+	write(x3);
+	write(y3);
+	write(c1);
+	write(c2);
+	write(c3);
+};

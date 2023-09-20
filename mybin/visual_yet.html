@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>YET機械語実行環境</title>
+    <style>
+        h1{
+            background-color: aqua;
+            width: 100%;
+            height: 40pt;
+            position: absolute;
+            top: -16pt;
+            left: 0pt;
+        }
+        #terminal {
+            font-family: 'courier new', Futura, Helvetica, '游ゴシック', 'メイリオ', Osaka;
+            width: 49%;
+            position: absolute;          
+            right: 10px;
+            top: 123px;
+            overflow: auto;
+            display: block;
+            border: none;
+            resize: none;
+            background-color: black;
+            color: white;
+            font-size: 15pt;
+            line-height: 1.4em;
+        }
+
+        #terminal_text {
+            position: absolute;
+            top: 60px;
+            right: 45%;
+        }
+
+        #codearea {
+            width: 49%;
+            overflow: auto;
+            resize: none;
+        }
+
+        #run {
+            width: 120px;
+            height: 40px;
+            font-size: 15pt;
+            background-color: rgb(33, 185, 33);
+            color: white;
+            display: inline-block;
+        }
+        #autorun {
+            width: 120px;
+            height: 40px;
+            font-size: 15pt;
+            background-color: rgb(67, 67, 134);
+            color: white;
+            display: inline-block;
+        }
+        #autorun_notch {
+            display: inline-block;
+        }
+
+        table {
+            text-align: center;
+            border-collapse: collapse;
+        }
+        caption{
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body onload="init()">
+    <header>
+        <h1 style="background-color: cornflowerblue">YETヴィジュアル実行環境</h1>
+    </header>
+    <h3 id="terminal_text">ターミナル</h3>
+    <br><br><textarea id="terminal" rows=14 spellcheck="false"></textarea>
+    <h3>コード</h3>
+    <input type="file" id="file" style="width: 20%; height: 20%; display: inline-block;">
+    <button id="run" onclick="execute();">手動実行</button>
+    <button id="autorun" onclick="autoExecute();">自動実行</button>
+    <input type="range" id="autorun_notch" min="0" max="3" value="0.5" step="0.1"><br>
+    <textarea id="codearea" rows=15 readonly></textarea><br>
+    <p id="asm" style="font-size: 15pt; font-family: monospace;"><span style="background-color: orange;">assembler code</span></p>
+    <table id="register_board" border="1">
+        <caption>レジスタ（上:64bit整数 下:64bit浮動小数点数）</caption>
+        <tr id="register_name">
+        </tr>
+        <tr id="register_value_long" style="table-layout: fixed;">
+        </tr>
+        <tr id="register_value_double" style="table-layout: fixed;">
+        </tr>
+    </table>
+    <p style="text-align: right;">RET:リターン HP:ヒープポインタ BP:ベースポインタ SP:スタックポインタ</p>
+    <br>
+    <table id="stack_board" border="1">
+        <caption>スタック領域（上:64bit整数 下:64bit浮動小数点数）</caption>
+        <tr id="stack_value_long"></tr>
+        <tr id="stack_value_double"></tr>
+    </table>
+    <br>
+    <table id="heep_board" border="1">
+        <caption>ヒープ領域（配列用、上:64bit整数 下:64bit浮動小数点数）</caption>
+        <tr id="heep_value_long"></tr>
+        <tr id="heap_value_double"></tr>
+    </table>
+    <br>
+    <table id="global_board" border="1">
+        <caption>グローバル領域（グローバル変数用、上:64bit整数 下:64bit浮動小数点数）</caption>
+        <tr id="global_value_long"></tr>
+        <tr id="global_value_double"></tr>
+    </table>
+    <script>
+        let input = document.getElementById('file');
+        let reader = new FileReader();
+        let terminal = document.getElementById('terminal');
+        let code_area = document.getElementById('codearea');
+        let code;
+        let code_str;
+        let stack;
+        let global;
+        let heep;
+        let rsp;
+        let pc;
+        let registers = Array(32);
+        registers.fill(0);
+
+        function init() {
+            var regboardname = document.getElementById("register_name");
+            var regboardvaluelong = document.getElementById("register_value_long");
+            var regboardvaluedouble = document.getElementById("register_value_double");
+            for (let i = 0; i < registers.length; i++) {
+                let th = document.createElement("th");
+                th.appendChild(document.createTextNode("r" + i));
+                regboardname.appendChild(th);
+                let td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                regboardvaluelong.appendChild(td);
+                td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                regboardvaluedouble.appendChild(td);
+            }
+            regboardname.cells[28].firstChild.data = "r28(RET)";
+            regboardname.cells[29].firstChild.data = "r29(HP)";
+            regboardname.cells[30].firstChild.data = "r30(BP)";
+            regboardname.cells[31].firstChild.data = "r31(SP)";
+            var stackboardvaluelong = document.getElementById("stack_value_long");
+            var stackboardvaluedouble = document.getElementById("stack_value_double");
+            for(let i = 0; i < 100; i++){
+                let td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                stackboardvaluelong.appendChild(td);
+                td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                stackboardvaluedouble.appendChild(td);
+            }
+            var heepboardvaluelong = document.getElementById("heep_value_long");
+            var heepboardvaluedouble = document.getElementById("heap_value_double");
+            for(let i = 0; i < 100; i++){
+                let td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                heepboardvaluelong.appendChild(td);
+                td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                heepboardvaluedouble.appendChild(td);
+            }
+            var globalboardvaluelong = document.getElementById("global_value_long");
+            var globalboardvaluedouble = document.getElementById("global_value_double");
+            for(let i = 0; i < 100; i++){
+                let td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                globalboardvaluelong.appendChild(td);
+                td = document.createElement("td");
+                td.appendChild(document.createTextNode("0"));
+                td.setAttribute("width", 100);
+                globalboardvaluedouble.appendChild(td);
+            }
+            stack = new ArrayBuffer(2621456);
+            rsp = 31;
+            registers[rsp] = BigInt(stack.byteLength);
+            global = new BigInt64Array(1000000);
+            heep = new BigInt64Array(10000000);
+        }
+
+        input.addEventListener('change', () => {
+            file = input.files[0];
+            reader.readAsBinaryString(file);
+            reader.onload = () => {
+                s = reader.result;
+                code = new Array(reader.length);
+                code_area = document.getElementById("codearea");
+                code_area.textContent = "";
+                for (let i = 0; i < s.length; i++) {
+                    let n = ("0" + s.charCodeAt(i).toString(16)).substr(-2);
+                    code[i] = parseInt(n.toString(), 16);
+                    code_area.textContent += n + "  ";
+                    code_str += n + "  ";
+                }
+            };
+            pc = 0;
+        });
+
+        function bufToInt64(buf, pos) {
+            var sum = 0;
+            for (let i = pos + 7; i >= pos; i--)
+                sum += buf[i] * 256 ** (i - pos);
+            return sum;
+        }
+        function replaceStr(str, idx) {
+            var val = str.substr(idx, 2);
+            str = str.slice(0, idx) + str.slice(idx + 1);
+            var res = str.slice(0, idx) + '<' + val + '>' + str.slice(idx + 2);
+            console.log(res);
+            return res;
+        }
+        function longToDouble(l){
+            var buffer = new ArrayBuffer(8);
+            var view = new DataView(buffer);
+            view.setBigInt64(0, BigInt(l.toString()), false);
+            return view.getFloat64(0);
+        }
+        function doubleToLong(d){
+            var buffer = new ArrayBuffer(8);
+            var view = new DataView(buffer);
+            view.setFloat64(0, d, false);
+            return view.getBigInt64(0);
+        }
+        function setStackValue(idx, v){
+            var view = new DataView(stack);
+            var offset = Number(idx)-8;
+            view.setBigInt64(offset, BigInt(v.toString()), false);
+
+            //var stackBoardValue = document.getElementById("stack_value");
+            //stackBoardValue.cells[(327682 - idx) / 8].style.backgroundColor = "cyan";
+        }
+        function getStackValue(idx){
+            var view = new DataView(stack);
+            var offset = Number(idx)-8;
+            return view.getBigInt64(offset);
+        }
+
+        let isPressEnter = false;
+        terminal.addEventListener("keydown", (e) => {
+                if(e.keyCode === 13){
+                isPressEnter = true;
+                return false;
+            }
+        });
+        const minimamError = 0.001;
+        function execute() {
+            var opecode = code[pc];
+            var asm = document.getElementById("asm");
+            let value;
+            var asmcode;
+            asm.textContent = pc;
+            switch (opecode) {
+                case 1: //movn
+                    value = bufToInt64(code, pc + 2);
+                    asmcode = "MOVN " + "r" + code[pc + 1] + " " + value;
+                    registers[code[pc + 1]] = value;
+                    pc += 10;
+                    break;
+                case 2: //movs
+                    asmcode = "MOVR " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = Number(getStackValue(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 3: //movh
+                    console.log(longToDouble(registers[code[pc + 2]])/8);
+                    asmcode = "MOVH " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = Number(heep[longToDouble(registers[code[pc + 2]])/8]);
+                    pc += 3;
+                    break;
+                case 4: //movg
+                    asmcode = "MOVG " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = Number(global[registers[code[pc + 2]]/8]);
+                    pc += 3;
+                    break;
+                case 5: //movr
+                    asmcode = "MOVR " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = registers[code[pc + 2]];
+                    pc += 3;
+                    break;
+                case 6: //movsr
+                    asmcode = "MOVSR " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    setStackValue(registers[code[pc + 1]], registers[code[pc + 2]]);
+                    pc += 3;
+                    break;
+                case 7: //movhr
+                    asmcode = "MOVHR " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    heep[longToDouble(registers[code[pc + 1]])/8] = BigInt(registers[code[pc + 2]]);
+                    pc += 3;
+                    break;
+                case 8: //movgr
+                    asmcode = "MOVGR " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    global[registers[code[pc + 1]]/8] = BigInt(registers[code[pc + 2]]);
+                    pc += 3;
+                    break;
+                case 9: //add
+                    asmcode = "ADD " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) + longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 10://sub
+                    asmcode = "SUB " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) - longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 11://mul
+                    asmcode = "MUL " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) * longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 12://div
+                    asmcode = "DIV " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) / longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 13://mod
+                    asmcode = "MOD " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) % longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 14://exp
+                    asmcode = "EXP " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) ** longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 15://equ
+                    asmcode = "EQU " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(Math.abs(longToDouble(registers[code[pc + 1]]) - longToDouble(registers[code[pc + 2]])) < minimamError);
+                    pc += 3;
+                    break;
+                case 16://nequ
+                    asmcode = "NEQU " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = Math.abs(doubleToLong(longToDouble(registers[code[pc + 1]]) - longToDouble(registers[code[pc + 2]]))) >= minimamError;
+                    pc += 3;
+                    break;
+                case 17://more
+                    asmcode = "MORE " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) - minimamError > longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 18://less
+                    asmcode = "LESS " + "r" + code[pc + 1] + " r" + code[pc + 2];
+                    registers[code[pc + 1]] = doubleToLong(longToDouble(registers[code[pc + 1]]) + minimamError < longToDouble(registers[code[pc + 2]]));
+                    pc += 3;
+                    break;
+                case 19://jumpn
+                    value = bufToInt64(code, pc + 1);
+                    asmcode = "JUMPN " + value;
+                    pc = value;
+                    break;
+                case 20://jumpr
+                    asmcode = "JUMPR " + "r" + code[pc + 1];
+                    pc = Number(registers[code[pc + 1]]);
+                    break;
+                case 21://ifzero
+                    if (registers[code[pc + 1]] == 0) {
+                        value = bufToInt64(code, pc + 2);
+                        pc = value;
+                    } else
+                        pc += 10;
+                    break;
+                case 22://pushn
+                    value = bufToInt64(code, pc + 1);
+                    asmcode = "PUSHN " + value;
+                    registers[rsp] -= 8n;
+                    setStackValue(registers[rsp], value);
+                    pc += 9;
+                    break;
+                case 23://pushr
+                    asmcode = "PUSHR " + "r" + code[pc + 1];
+                    registers[rsp] -= 8n;
+                    setStackValue(registers[rsp], registers[code[pc + 1]]);
+                    pc += 2;
+                    break;
+                case 24://pop
+                    asmcode = "POP " + "r" + code[pc + 1];
+                    registers[code[pc + 1]] = getStackValue(registers[rsp]);
+                    registers[rsp] += 8n;
+                    pc += 2;
+                    break;
+                case 25://out
+                    asmcode = "OUT " + "r" + code[pc + 1];
+                    terminal.textContent += Math.round(longToDouble(registers[code[pc + 1]]) * Math.pow(10, 10))/Math.pow(10, 10) + '\n';
+                    pc += 2;
+                    break;
+                case 26://in
+                    asmcode = "IN " + "r" + code[pc + 1];
+                    value = doubleToLong(Number(prompt("数値を入力")))
+                    registers[code[pc + 1]] = value;
+                    terminal.textContent += "input> " + longToDouble(value) + "\n";
+                    pc += 2;
+                    break;
+                case 27://conv
+                    asmcode = "CONV " + "r" + code[pc + 1];
+                    registers[code[pc + 1]] = doubleToLong(Math.round(longToDouble(registers[code[pc + 1]]) * 8));
+                    pc += 2;
+                    break;
+                case 28://hlt
+                    asm.innerHTML += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;HLT"
+                    return 0;
+                default:
+                    asmcode = "不明なオペコードです。0x" + code[pc].toString(16);
+            }
+            asm.innerHTML = "<span style=\"background-color: orange;\">" + asm.textContent + "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + asmcode + "</span>";
+            update();
+            return 1;
+        }
+
+        function update(){
+            var regboardvaluelong = document.getElementById("register_value_long");
+            var regboardvaluedouble = document.getElementById("register_value_double");
+            var buffer = new ArrayBuffer(8);
+            for (let i = 0; i < registers.length; i++) {
+                regboardvaluelong.cells[i].firstChild.data = registers[i];
+                regboardvaluedouble.cells[i].firstChild.data = longToDouble(registers[i]);
+            }
+            var stackboardvaluelong = document.getElementById("stack_value_long");
+            var stackboardvaluedouble = document.getElementById("stack_value_double");
+            var view;
+            for(let i = stack.byteLength; i > stack.byteLength - 800; i-=8){
+                view = new DataView(stack.slice(i - 8, i))
+                stackboardvaluelong.cells[(stack.byteLength - i) / 8].firstChild.data = view.getBigInt64(0);
+                stackboardvaluedouble.cells[(stack.byteLength - i) / 8].firstChild.data = view.getFloat64(0);
+            }
+            var heepboardvaluelong = document.getElementById("heep_value_long");
+            var heepboardvaluedouble = document.getElementById("heap_value_double");
+            for(let i = 0; i < 100; i++){
+                heepboardvaluelong.cells[i].firstChild.data = heep[i];
+                heepboardvaluedouble.cells[i].firstChild.data = longToDouble(heep[i]);
+            }
+            var globalboardvaluelong = document.getElementById("global_value_long");
+            var globalboardvaluedouble = document.getElementById("global_value_double");
+            for(let i = 0; i < 100; i++){
+                globalboardvaluelong.cells[i].firstChild.data = global[i];
+                globalboardvaluedouble.cells[i].firstChild.data = longToDouble(global[i]);
+            }
+        }
+
+        async function autoExecute(){
+            var notch = document.getElementById("autorun_notch");
+            function syncDelay(milliseconds){
+                var start = new Date().getTime();
+                var end = new Date().getTime();
+                while((end-start) < milliseconds){
+                    end = new Date().getTime();
+                }
+            }
+            const repaint = async () => {
+                for (let i = 0; i < 2; i++) {
+                    await new Promise(resolve => requestAnimationFrame(resolve));
+                }
+            };
+            while(true){
+                if(execute() == 0)
+                    break;
+                syncDelay(notch.value * 1000);
+                await repaint();
+            };
+        }
+    </script>
+</body>
+
+</html>

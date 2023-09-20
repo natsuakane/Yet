@@ -1,0 +1,13 @@
+map(f, a1, a2, len) = {
+	a2$(len - 1) = f(a1@(len - 1));
+	if(len == 1, {return(0);}, {map(f, a1, a2, len - 1);});
+};
+double(a) = a * 2;
+main() = {
+	array1 = [3, 5, 6];
+	array2 = makearray(3);
+	map(double, array1, array2, 3);
+	write(array2@0);
+	write(array2@1);
+	write(array2@2);
+};

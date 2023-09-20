@@ -1,0 +1,31 @@
+#!/bin/bash
+
+function usage {
+	cat <<EOM
+Usage: $(basename "$0") [p] [-o filename]
+EOM
+}
+read_file_name=${@:$#:1}
+out_file_name="a.svg"
+is_print=0
+
+function set_outfile() {
+	out_file_name="$OPTARG"
+}
+
+while getopts ":po:h" optKey; do
+	case "$optKey" in
+		p)
+			is_print=1	
+			;;
+		o)
+			set_outfile
+			;;
+		'-h'|'--help'|* )
+			usage
+			exit 1
+			;;
+	esac
+done
+
+yet_draw $out_file_name $is_print $(yet $read_file_name)

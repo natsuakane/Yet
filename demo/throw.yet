@@ -1,0 +1,15 @@
+#include taylor
+#define g 9.80665
+#define v0 45.83
+#define notch 1
+#define pi 3.1415926535
+
+position_x(theta) = pow(v0, 2) * taylor_sin(2 * theta, 30) / g;
+angle_range(start, end) = {
+	write(start);
+	write(position_x(start/180*pi));
+	if(start > end - notch, {return(0);}, {angle_range(start + notch, end);});
+};
+main() = {
+	angle_range(0, 90);
+};

@@ -1,0 +1,4 @@
+#include shape
+
+set_size(512, 512);
+circle(200, 300, 100, 5, 5, 5);

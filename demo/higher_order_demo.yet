@@ -1,0 +1,7 @@
+add(a, b) = a + b;
+print(f) = {
+	write(f(3, 5));
+};
+main() = {
+	print(add);
+};

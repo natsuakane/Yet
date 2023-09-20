@@ -1,0 +1,8 @@
+#define e 2.718281828
+#define pi 3.1415926535
+#define m 0.001
+#define c 0.01
+#define d 0.1
+#define da 10
+#define h 100
+#define k 1000
