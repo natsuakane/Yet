@@ -1,0 +1,16 @@
+#include shape
+#include taylor
+#define g 9.8
+#define v0 45.83
+#define height 300
+#define width 300
+
+draw_tra(x, theta) = {
+	declare(y);
+	y = (taylor_sin(theta, 30) / taylor_cos(theta, 30)) * x - g / (2 * v0 ^ 2 * taylor_cos(theta, 30) ^ 2) * x ^ 2;
+	circle(x, -1 * y + height, 5, 0, 100, 255);
+	if(y < 0, {return(0);}, {draw_tra(x + 1, theta);});
+};
+set_size(width, height);
+theta = 0.785;
+draw_tra(0, theta);
