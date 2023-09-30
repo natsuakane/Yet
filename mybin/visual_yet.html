@@ -14,9 +14,6 @@
         }
         #terminal {
             font-family: 'courier new', Futura, Helvetica, '游ゴシック', 'メイリオ', Osaka;
-            width: 49%;
-            position: absolute;          
-            right: 10px;
             top: 123px;
             overflow: auto;
             display: block;
@@ -26,18 +23,13 @@
             color: white;
             font-size: 15pt;
             line-height: 1.4em;
-        }
-
-        #terminal_text {
-            position: absolute;
-            top: 60px;
-            right: 45%;
+            width: 100%;
         }
 
         #codearea {
-            width: 49%;
             overflow: auto;
             resize: none;
+            width: 100%;
         }
 
         #run {
@@ -74,15 +66,9 @@
     <header>
         <h1 style="background-color: cornflowerblue">YETヴィジュアル実行環境</h1>
     </header>
-    <h3 id="terminal_text">ターミナル</h3>
-    <br><br><textarea id="terminal" rows=14 spellcheck="false"></textarea>
-    <h3>コード</h3>
-    <input type="file" id="file" style="width: 20%; height: 20%; display: inline-block;">
-    <button id="run" onclick="execute();">手動実行</button>
-    <button id="autorun" onclick="autoExecute();">自動実行</button>
-    <input type="range" id="autorun_notch" min="0" max="3" value="0.5" step="0.1"><br>
-    <textarea id="codearea" rows=15 readonly></textarea><br>
-    <p id="asm" style="font-size: 15pt; font-family: monospace;"><span style="background-color: orange;">assembler code</span></p>
+    <br><h2>ターミナル</h2>
+    <textarea id="terminal" rows=14 spellcheck="false"></textarea>
+    <br>
     <table id="register_board" border="1">
         <caption>レジスタ（上:64bit整数 下:64bit浮動小数点数）</caption>
         <tr id="register_name">
@@ -93,6 +79,14 @@
         </tr>
     </table>
     <p style="text-align: right;">RET:リターン HP:ヒープポインタ BP:ベースポインタ SP:スタックポインタ</p>
+    <br>
+    <h3>コード領域</h3>
+    <input type="file" id="file" style="width: 20%; height: 20%; display: inline-block;">
+    <button id="run" onclick="execute();">手動実行</button>
+    <button id="autorun" onclick="autoExecute();">自動実行</button>
+    <input type="range" id="autorun_notch" min="0" max="3" value="0.5" step="0.1"><br>
+    <textarea id="codearea" rows=15 readonly></textarea><br>
+    <p id="asm" style="font-size: 15pt; font-family: monospace;"><span style="background-color: orange;">assembler code</span></p>
     <br>
     <table id="stack_board" border="1">
         <caption>スタック領域（上:64bit整数 下:64bit浮動小数点数）</caption>
