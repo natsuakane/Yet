@@ -154,7 +154,9 @@ void Lexer::readline(){
             while('0'<=line[i] && line[i]<='9'){
                 str += line[i++];
             }
-            token = IdToken(lineno, str);
+			if(str == "NaN") token = NumToken(lineno, NAN);
+			else if(str == "Infinity") token = NumToken(lineno, INFINITY);
+            else token = IdToken(lineno, str);
         }else if(' '==line[i] || '\t'==line[i]){
             i++;
             continue;
