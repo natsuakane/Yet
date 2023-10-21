@@ -645,8 +645,11 @@ Astleaf Parser::code(){
 				Astleaf inccode = incparser.code();
 				for(int i = 0; i < inccode.getblocksize(); i++)
 					exps.push_back(inccode.getblock(i));
-				macro.merge(incparser.macro);
-				userop.merge(incparser.userop);
+				//macro.merge(incparser.macro);
+				for(auto itr = incparser.macro.begin(); itr != incparser.macro.end(); itr++)
+					macro[itr->first] = itr->second;
+				for(auto itr = incparser.userop.begin(); itr != incparser.userop.end(); itr++)
+					userop[itr->first] = itr->second;
 				incparser.closefile();
 			}else if(istoken("define")){
 				token("define");
@@ -762,6 +765,7 @@ public:
 		nativefuncs.push_back("return");
 		nativefuncs.push_back("if");
 		nativefuncs.push_back("makearray");
+		nativefuncs.push_back("isNaN");
     }
     void write(uint8_t b){
         code[pc] = b;
@@ -892,6 +896,8 @@ void Compiler::compile(Astleaf e, bool isassignment){
 						writenum(hp);
 						reg_num++;
 						hp += (int)exp.getleft().getblock(0).getvalue() * 8;
+					}else if(exp.getname() == "isNaN"){
+
 					}
 				}
 			}else{
